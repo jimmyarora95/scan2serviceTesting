@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}{{ mode|capfirst }} Room — Scan2Service{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h4 class="mb-3">{{ mode|capfirst }} Room</h4>
+        <form method="post">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label">Room number</label>
+            {{ form.number }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Floor</label>
+            {{ form.floor }}
+          </div>
+          <div class="form-check mb-3">
+            {{ form.is_active }} <label class="form-check-label ms-1">Active</label>
+          </div>
+          <button class="btn btn-success">Save</button>
+          <a href="{% url 'rooms_list' %}" class="btn btn-link">Cancel</a>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

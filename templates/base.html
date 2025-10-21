@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Scan2Service{% endblock %}</title>
+
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</head>
+<body class="bg-light">
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <div class="container">
+    <a class="navbar-brand" href="/">Scan2Service</a>
+
+    <div class="ms-auto">
+      {% if request.user.is_authenticated %}
+        <a class="btn btn-sm btn-outline-light me-2" href="/portal/">Portal</a>
+        <a class="btn btn-sm btn-warning me-2" href="/portal/settings/">Settings</a>
+        <a class="btn btn-sm btn-outline-light" href="/logout/">Logout</a>
+      {% else %}
+        <a class="btn btn-sm btn-outline-light me-2" href="/login/">Login</a>
+        <a class="btn btn-sm btn-success" href="/signup/">Sign up</a>
+      {% endif %}
+    </div>
+  </div>
+</nav>
+
+
+  <main class="container py-4">
+    {% if messages %}
+      <div class="mb-3">
+        {% for m in messages %}<div class="alert alert-{{ m.tags }}">{{ m }}</div>{% endfor %}
+      </div>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

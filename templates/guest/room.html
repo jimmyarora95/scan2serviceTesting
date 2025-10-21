@@ -1,0 +1,494 @@
+{% extends "base.html" %}
+{% load dict_tags %}
+
+{% block title %}{{ hotel.name }} — Room {{ room.number }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3 class="mb-0">{{ hotel.name }} — Room {{ room.number }}</h3>
+  <div class="d-flex gap-2">
+    <button id="myServicesBtn" class="btn btn-outline-primary btn-sm">My services</button>
+    <button id="cartBtn" class="btn btn-primary btn-sm">
+      Cart <span class="badge bg-light text-dark" id="cartCount">{{ cart_count }}</span>
+    </button>
+  </div>
+</div>
+<p class="text-muted">Scan to request services or order food.</p>
+
+<!-- MY SERVICES MODAL -->
+<div class="modal fade" id="myServicesModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">My services & orders</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="myServicesBody">
+        <div class="text-muted">Loading…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SERVICE CONFIRMATION MODAL -->
+<div class="modal fade" id="serviceConfirmModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-md">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Confirm service request</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="svcName" class="fw-semibold"></div>
+        <div id="svcDesc" class="small text-muted mb-2"></div>
+        <div id="svcPrice" class="fw-bold"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button id="svcConfirmBtn" class="btn btn-primary">Place request</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CART MODAL -->
+<div class="modal fade" id="cartModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Your Cart</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="cartBody">
+        <div class="text-muted">Loading...</div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline-secondary" id="cartClearBtn">Clear</button>
+        <button class="btn btn-success" id="cartSubmitBtn">Place Order</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tabs -->
+<ul class="nav nav-tabs mb-3" role="tablist">
+  <li class="nav-item" role="presentation">
+    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#food" type="button" role="tab">Food</button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#services" type="button" role="tab">Services</button>
+  </li>
+</ul>
+
+<div class="tab-content">
+
+  <!-- FOOD TAB -->
+  <div class="tab-pane fade show active" id="food" role="tabpanel">
+    {% if top_food %}
+      {% for parent in top_food %}
+        <h5 class="mt-3">{{ parent.name }}</h5>
+
+        {% with kids=children|get_item:parent.id %}
+          {% if kids %}
+            {% for child in kids %}
+              <h6 class="mt-3 text-muted">{{ child.name }}</h6>
+
+              {% with gkids=children|get_item:child.id %}
+                {% if gkids %}
+                  {% for gc in gkids %}
+                    {% with list=items_by_cat|get_item:gc.id %}
+                      {% if list %}
+                        <div class="row g-3 row-cols-1 row-cols-sm-2 row-cols-md-3">
+                          {% for it in list %}
+                            <div class="col">
+                              <div class="card h-100">
+                                {% if it.image and it.image.file %}
+                                  <img src="{{ it.image.file.url }}" class="card-img-top" style="object-fit:cover;height:140px;" alt="">
+                                {% endif %}
+                                <div class="card-body d-flex flex-column">
+                                  <div class="d-flex justify-content-between align-items-start">
+                                    <h6 class="card-title mb-1">{{ it.name }}</h6>
+                                    <strong>₹ {{ it.price }}</strong>
+                                  </div>
+                                  {% if it.unit or it.description %}
+                                    <div class="text-muted small mb-2">
+                                      {% if it.unit %}Unit: {{ it.unit }}{% endif %}
+                                      {% if it.unit and it.description %} · {% endif %}
+                                      {{ it.description|truncatechars:80 }}
+                                    </div>
+                                  {% endif %}
+                                  <button class="btn btn-sm btn-primary mt-auto add-to-cart"
+                                          data-item="{{ it.id }}">Add</button>
+                                </div>
+                              </div>
+                            </div>
+                          {% endfor %}
+                        </div>
+                      {% else %}
+                        <div class="text-muted small">No items in {{ gc.name }}.</div>
+                      {% endif %}
+                    {% endwith %}
+                  {% endfor %}
+                {% else %}
+                  {% with list=items_by_cat|get_item:child.id %}
+                    {% if list %}
+                      <div class="row g-3 row-cols-1 row-cols-sm-2 row-cols-md-3">
+                        {% for it in list %}
+                          <div class="col">
+                            <div class="card h-100">
+                              {% if it.image and it.image.file %}
+                                <img src="{{ it.image.file.url }}" class="card-img-top" style="object-fit:cover;height:140px;" alt="">
+                              {% endif %}
+                              <div class="card-body d-flex flex-column">
+                                <div class="d-flex justify-content-between align-items-start">
+                                  <h6 class="card-title mb-1">{{ it.name }}</h6>
+                                  <strong>₹ {{ it.price }}</strong>
+                                </div>
+                                {% if it.unit or it.description %}
+                                  <div class="text-muted small mb-2">
+                                    {% if it.unit %}Unit: {{ it.unit }}{% endif %}
+                                    {% if it.unit and it.description %} · {% endif %}
+                                    {{ it.description|truncatechars:80 }}
+                                  </div>
+                                {% endif %}
+                                <button class="btn btn-sm btn-primary mt-auto add-to-cart"
+                                        data-item="{{ it.id }}">Add</button>
+                              </div>
+                            </div>
+                          </div>
+                        {% endfor %}
+                      </div>
+                    {% else %}
+                      <div class="text-muted small">No items in {{ child.name }}.</div>
+                    {% endif %}
+                  {% endwith %}
+                {% endif %}
+              {% endwith %}
+            {% endfor %}
+          {% else %}
+            {% with list=items_by_cat|get_item:parent.id %}
+              {% if list %}
+                <div class="row g-3 row-cols-1 row-cols-sm-2 row-cols-md-3">
+                  {% for it in list %}
+                    <div class="col">
+                      <div class="card h-100">
+                        {% if it.image and it.image.file %}
+                          <img src="{{ it.image.file.url }}" class="card-img-top" style="object-fit:cover;height:140px;" alt="">
+                        {% endif %}
+                        <div class="card-body d-flex flex-column">
+                          <div class="d-flex justify-content-between align-items-start">
+                            <h6 class="card-title mb-1">{{ it.name }}</h6>
+                            <strong>₹ {{ it.price }}</strong>
+                          </div>
+                          {% if it.unit or it.description %}
+                            <div class="text-muted small mb-2">
+                              {% if it.unit %}Unit: {{ it.unit }}{% endif %}
+                              {% if it.unit and it.description %} · {% endif %}
+                              {{ it.description|truncatechars:80 }}
+                            </div>
+                          {% endif %}
+                          <button class="btn btn-sm btn-primary mt-auto add-to-cart"
+                                  data-item="{{ it.id }}">Add</button>
+                        </div>
+                      </div>
+                    </div>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <div class="text-muted small">No food items yet.</div>
+              {% endif %}
+            {% endwith %}
+          {% endif %}
+        {% endwith %}
+      {% endfor %}
+    {% else %}
+      <div class="text-muted">No food categories yet.</div>
+    {% endif %}
+  </div>
+
+  <!-- SERVICES TAB -->
+  <div class="tab-pane fade" id="services" role="tabpanel">
+    {% if top_service %}
+      {% for parent in top_service %}
+        <h5 class="mt-3">{{ parent.name }}</h5>
+        {% with kids=children|get_item:parent.id %}
+          {% if kids %}
+            {% for child in kids %}
+              <h6 class="mt-3 text-muted">{{ child.name }}</h6>
+              {% with list=items_by_cat|get_item:child.id %}
+                {% if list %}
+                  <div class="list-group mb-3">
+                    {% for it in list %}
+                      <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                          <div>{{ it.name }}</div>
+                          {% if it.description %}
+                            <div class="small text-muted">{{ it.description|truncatechars:100 }}</div>
+                          {% endif %}
+                        </div>
+                        <button
+                          class="btn {% if it.id in open_service_ids %}btn-secondary{% else %}btn-outline-primary{% endif %} btn-sm request-now"
+                          data-item="{{ it.id }}"
+                          data-name="{{ it.name|escapejs }}"
+                          data-desc="{{ it.description|default:''|escapejs }}"
+                          data-price="{{ it.price|default:'0.00' }}"
+                          {% if it.id in open_service_ids %}disabled{% endif %}
+                        >
+                          {% if it.id in open_service_ids %}Requested{% else %}Request now{% endif %}
+                        </button>
+                      </div>
+                    {% endfor %}
+                  </div>
+                {% else %}
+                  <div class="text-muted small">No services in {{ child.name }}.</div>
+                {% endif %}
+              {% endwith %}
+            {% endfor %}
+          {% else %}
+            {% with list=items_by_cat|get_item:parent.id %}
+              {% if list %}
+                <div class="list-group mb-3">
+                  {% for it in list %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                      <div>
+                        <div>{{ it.name }}</div>
+                        {% if it.description %}
+                          <div class="small text-muted">{{ it.description|truncatechars:100 }}</div>
+                        {% endif %}
+                      </div>
+                      <button
+                        class="btn {% if it.id in open_service_ids %}btn-secondary{% else %}btn-outline-primary{% endif %} btn-sm request-now"
+                        data-item="{{ it.id }}"
+                        data-name="{{ it.name|escapejs }}"
+                        data-desc="{{ it.description|default:''|escapejs }}"
+                        data-price="{{ it.price|default:'0.00' }}"
+                        {% if it.id in open_service_ids %}disabled{% endif %}
+                      >
+                        {% if it.id in open_service_ids %}Requested{% else %}Request now{% endif %}
+                      </button>
+                    </div>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <div class="text-muted small">No services yet.</div>
+              {% endif %}
+            {% endwith %}
+          {% endif %}
+        {% endwith %}
+      {% endfor %}
+    {% else %}
+      <div class="text-muted">No service categories yet.</div>
+    {% endif %}
+  </div>
+
+</div>
+
+<script>
+(function(){
+  // ---------- helpers ----------
+  function getCookie(name){
+    const m=document.cookie.match(new RegExp('(^| )'+name+'=([^;]+)'));
+    return m?decodeURIComponent(m[2]):null;
+  }
+  function csrf(){ return getCookie('csrftoken'); }
+
+  const base = "{{ request.path }}";
+  const URLS = {
+    view:    base + "cart/view/",
+    add:     base + "cart/add/",
+    update:  base + "cart/update/",
+    clear:   base + "cart/clear/",
+    submit:  base + "order/submit/",
+    svcReq:  base + "service/request/",
+    summary: base + "summary/"
+  };
+
+  function moneyINR(x){
+    try{ return new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR'}).format(parseFloat(x)||0); }
+    catch(e){ return `₹ ${parseFloat(x||0).toFixed(2)}`; }
+  }
+
+  // ---------- My Services modal ----------
+  const myBtn = document.getElementById('myServicesBtn');
+  const myModal = new bootstrap.Modal(document.getElementById('myServicesModal'));
+  const myBody  = document.getElementById('myServicesBody');
+
+  myBtn.addEventListener('click', async function () {
+    myBody.innerHTML = '<div class="text-muted">Loading…</div>';
+    try {
+      const res = await fetch(URLS.summary, { credentials: "same-origin" });
+      const data = await res.json();
+      const food = data.food || [];
+      const services = data.services || [];
+      if (!food.length && !services.length){
+        myBody.innerHTML = '<div class="text-muted">You haven’t taken any service yet.</div>';
+        myModal.show(); return;
+      }
+      let html = '';
+      if (food.length){
+        html += '<h6>Food</h6><ul class="list-group mb-3">';
+        food.forEach(i => {
+          const total = (i.qty * i.price);
+          html += `<li class="list-group-item d-flex justify-content-between align-items-center">
+            <span>${i.name} <span class="text-muted">× ${i.qty}</span></span>
+            <strong>${moneyINR(total)}</strong>
+          </li>`;
+        });
+        html += '</ul>';
+      }
+      if (services.length){
+        html += '<h6>Services</h6><ul class="list-group mb-3">';
+        services.forEach(i => {
+          html += `<li class="list-group-item d-flex justify-content-between align-items-center">
+            <span>${i.name}</span>
+            <span class="text-muted">${i.status}</span>
+          </li>`;
+        });
+        html += '</ul>';
+      }
+      myBody.innerHTML = html;
+    } catch {
+      myBody.innerHTML = '<div class="text-danger">Could not load your services.</div>';
+    }
+    myModal.show();
+  });
+
+  // ---------- Cart modal ----------
+  const cartBtn = document.getElementById('cartBtn');
+  const cartModal = new bootstrap.Modal(document.getElementById('cartModal'));
+  const cartBody = document.getElementById('cartBody');
+  const cartCount = document.getElementById('cartCount');
+  const cartClearBtn = document.getElementById('cartClearBtn');
+  const cartSubmitBtn = document.getElementById('cartSubmitBtn');
+
+  async function loadCart(){
+    const res = await fetch(URLS.view, { credentials: "same-origin" });
+    const html = await res.text();
+    cartBody.innerHTML = html;
+    const ct = res.headers.get("X-Cart-Count");
+    if (ct !== null) cartCount.textContent = ct;
+  }
+
+  cartBtn.addEventListener('click', async ()=>{ await loadCart(); cartModal.show(); });
+
+  // Add buttons (Food cards)
+  document.addEventListener('click', async (e)=>{
+    if(e.target.classList.contains('add-to-cart')){
+      const id = e.target.dataset.item;
+      const form = new URLSearchParams({ item_id: id, qty: 1 });
+      const res = await fetch(URLS.add, {
+        method: "POST",
+        headers: { "X-CSRFToken": csrf(), "Content-Type": "application/x-www-form-urlencoded" },
+        body: form,
+        credentials: "same-origin"
+      });
+      const html = await res.text();
+      cartBody.innerHTML = html;
+      const ct = res.headers.get("X-Cart-Count");
+      if (ct !== null) cartCount.textContent = ct;
+
+      const old = e.target.textContent; e.target.textContent = "Added";
+      e.target.disabled = true;
+      setTimeout(()=>{ e.target.textContent = old; e.target.disabled = false; }, 600);
+    }
+  });
+
+  // qty +/-
+  document.addEventListener('click', async (e)=>{
+    if(e.target.classList.contains('qty-btn')){
+      const id = e.target.dataset.id;
+      const d  = parseInt(e.target.dataset.d, 10);
+      const row = e.target.closest('[data-item-row]');
+      const span = row.querySelector('[data-qty]');
+      let qty = parseInt(span.textContent, 10) + d;
+      const form = new URLSearchParams({ item_id: id, qty: qty });
+      const res = await fetch(URLS.update, {
+        method: "POST",
+        headers: { "X-CSRFToken": csrf(), "Content-Type": "application/x-www-form-urlencoded" },
+        body: form,
+        credentials: "same-origin"
+      });
+      const html = await res.text();
+      cartBody.innerHTML = html;
+      const ct = res.headers.get("X-Cart-Count");
+      if (ct !== null) cartCount.textContent = ct;
+    }
+  });
+
+  cartClearBtn.addEventListener('click', async ()=>{
+    const res = await fetch(URLS.clear, {
+      method: "POST",
+      headers: { "X-CSRFToken": csrf() },
+      credentials: "same-origin"
+    });
+    const html = await res.text();
+    cartBody.innerHTML = html;
+    const ct = res.headers.get("X-Cart-Count");
+    if (ct !== null) cartCount.textContent = ct;
+  });
+
+  // Place Order → returns JSON
+  cartSubmitBtn.addEventListener('click', async ()=>{
+    const res = await fetch(URLS.submit, {
+      method: "POST",
+      headers: { "X-CSRFToken": csrf() },
+      credentials: "same-origin"
+    });
+    let data = null;
+    try { data = await res.json(); } catch(e) {}
+    if (data && data.ok){
+      cartModal.hide();
+      cartBody.innerHTML = '<div class="text-muted">Your cart is empty.</div>';
+      cartCount.textContent = "0";
+      alert("Order placed! Your request is now NEW on the hotel board.");
+    } else {
+      alert("Couldn’t submit your order.");
+    }
+  });
+
+  // --- Service confirmation & POST ---
+  const svcModal = new bootstrap.Modal(document.getElementById('serviceConfirmModal'));
+  const svcName = document.getElementById('svcName');
+  const svcDesc = document.getElementById('svcDesc');
+  const svcPrice = document.getElementById('svcPrice');
+  const svcConfirmBtn = document.getElementById('svcConfirmBtn');
+  let svcPending = null; // {id,btn}
+
+  document.addEventListener('click', (e)=>{
+    if (!e.target.classList.contains('request-now')) return;
+    if (e.target.disabled) return;
+    const btn = e.target;
+    const id = btn.dataset.item;
+    const name = btn.dataset.name || 'Service';
+    const desc = btn.dataset.desc || '';
+    const price = btn.dataset.price || '0.00';
+    svcName.textContent = name;
+    svcDesc.textContent = desc ? desc : '';
+    svcPrice.textContent = (parseFloat(price) > 0) ? moneyINR(price) : '';
+    svcPending = { id, btn };
+    svcModal.show();
+  });
+
+  svcConfirmBtn.addEventListener('click', async ()=>{
+    if (!svcPending) return;
+    const form = new URLSearchParams({ item_id: svcPending.id });
+    const res = await fetch(URLS.svcReq, {
+      method: "POST",
+      headers: { "X-CSRFToken": csrf(), "Content-Type": "application/x-www-form-urlencoded" },
+      body: form, credentials: "same-origin"
+    });
+    const data = await res.json().catch(()=>({ok:false}));
+    if (data.ok){
+      svcPending.btn.textContent = "Requested";
+      svcPending.btn.classList.remove('btn-outline-primary');
+      svcPending.btn.classList.add('btn-secondary');
+      svcPending.btn.disabled = true;
+      svcModal.hide();
+    } else {
+      alert("Couldn’t request service" + (data.error ? `: ${data.error}` : '.'));
+    }
+    svcPending = null;
+  });
+})();
+</script>
+{% endblock %}

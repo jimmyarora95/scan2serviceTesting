@@ -1,0 +1,24 @@
+{# templates/guest/_cart_body.html #}
+{% if items %}
+  <ul class="list-group mb-3">
+    {% for ci in items %}
+      <li class="list-group-item d-flex justify-content-between align-items-center" data-item-row>
+        <div>
+          <div>{{ ci.item.name }}</div>
+          <div class="small text-muted">₹ {{ ci.price_snapshot }} each</div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <button class="btn btn-sm btn-outline-secondary qty-btn" data-id="{{ ci.item_id }}" data-d="-1">–</button>
+          <span class="mx-1" data-qty>{{ ci.qty }}</span>
+          <button class="btn btn-sm btn-outline-secondary qty-btn" data-id="{{ ci.item_id }}" data-d="1">+</button>
+          <strong class="ms-3">₹ {{ ci.price_snapshot|floatformat:2 }}</strong>
+        </div>
+      </li>
+    {% endfor %}
+  </ul>
+  <div class="d-flex justify-content-between border-top pt-2">
+    <strong>Total</strong><strong>₹ {{ total|floatformat:2 }}</strong>
+  </div>
+{% else %}
+  <div class="text-muted">Your cart is empty.</div>
+{% endif %}

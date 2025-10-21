@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Items — Scan2Service{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3 class="mb-0">Items</h3>
+  <div class="d-flex align-items-center">
+    <form method="get" class="me-2">
+      <select name="category" class="form-select form-select-sm" onchange="this.form.submit()">
+        <option value="">All categories</option>
+        {% for c in categories %}
+          <option value="{{ c.id }}" {% if cat_id|default:'' == c.id|stringformat:'s' %}selected{% endif %}>
+            [{{ c.kind }}]{% if c.parent %} {{ c.parent.name }} /{% endif %} {{ c.name }}
+          </option>
+        {% endfor %}
+      </select>
+    </form>
+    {% if request.user.role != "STAFF" %}
+      <a href="{% url 'item_create' %}" class="btn btn-sm btn-primary">Add Item</a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-body p-0">
+    <table class="table table-sm mb-0 align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>Item</th><th>Category</th><th>Price</th><th>Avail</th><th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for it in items %}
+        <tr>
+          <td>
+            <div class="d-flex align-items-center">
+              {% if it.image and it.image.file %}
+                <img src="{{ it.image.file.url }}" alt="" style="height:36px;width:36px;object-fit:cover;border-radius:6px;margin-right:8px;">
+              {% endif %}
+              <div>
+                <div>{{ it.name }}</div>
+                {% if it.unit or it.description %}
+                  <div class="small text-muted">
+                    {% if it.unit %}Unit: {{ it.unit }}{% endif %}
+                    {% if it.unit and it.description %} · {% endif %}
+                    {{ it.description|truncatechars:60 }}
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+          </td>
+          <td>
+            {% if it.category.parent %}<span class="text-muted small">{{ it.category.parent.name }} /</span> {% endif %}
+            {{ it.category.name }}
+          </td>
+          <td>₹ {{ it.price }}</td>
+          <td>{{ it.is_available|yesno:"Yes,No" }}</td>
+          <td class="text-end">
+            {% if request.user.role != "STAFF" %}
+              <a href="{% url 'item_edit' it.id %}" class="btn btn-sm btn-outline-secondary">Edit</a>
+              <form method="post" action="{% url 'item_delete' it.id %}" class="d-inline"
+                    onsubmit="return confirm('Delete this item?');">
+                {% csrf_token %}
+                <button class="btn btn-sm btn-outline-danger">Delete</button>
+              </form>
+            {% endif %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5" class="text-muted p-3">No items yet.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

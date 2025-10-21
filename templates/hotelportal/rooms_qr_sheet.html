@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}Print Room QRs — Scan2Service{% endblock %}
+{% block content %}
+<style>
+  /* Print-friendly grid */
+  @media print {
+    .no-print { display:none !important; }
+    .card { break-inside: avoid; }
+  }
+  .qr-box { min-height: 220px; display:flex; align-items:center; justify-content:center; }
+  .tagline { font-size: 0.9rem; color:#666; }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3 class="mb-0">Print Room QRs</h3>
+  <div class="no-print">
+    <a href="{% url 'rooms_list' %}" class="btn btn-sm btn-outline-secondary">Back</a>
+    <button class="btn btn-sm btn-primary" onclick="window.print()">Print</button>
+  </div>
+</div>
+
+<div id="qr-root" class="mb-3" data-hotel-logo="{% if hotel.logo %}{{ hotel.logo.url }}{% endif %}">
+  <h5 class="mb-0">{{ hotel.name }}{% if hotel.city %}, {{ hotel.city }}{% endif %}</h5>
+  {% if hotel.owner_name %}<div class="text-muted small">Owner: {{ hotel.owner_name }}</div>{% endif %}
+</div>
+
+<!-- Grid of QR cards -->
+<div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3">
+  {% for r in rooms %}
+    <div class="col">
+      <div class="card shadow-sm">
+        <div class="card-body text-center">
+          <h5 class="card-title mb-2">Room {{ r.number }}{% if r.floor %} · Floor {{ r.floor }}{% endif %}</h5>
+          <div class="qr-box">
+            <!-- placeholder for QR canvas -->
+            <div class="qr-target"
+                 data-url="{{ SITE_URL }}/h/{{ hotel.id }}/r/{{ r.id }}/"
+                 data-room="{{ r.number }}"></div>
+          </div>
+          <div class="tagline mt-2">Scan for in-room services, food & more</div>
+          <div class="small text-muted">URL: /h/{{ hotel.id }}/r/{{ r.id }}/</div>
+        </div>
+      </div>
+    </div>
+  {% empty %}
+    <p class="text-muted">No active rooms yet.</p>
+  {% endfor %}
+</div>
+
+<!-- QR library (client-side). Uses a lightweight canvas-based QR generator -->
+<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+
+<script>
+/* 3.2B — Client-side QR render with optional logo overlay (fixed) */
+(async function () {
+  // Read HOTEL_LOGO from a safe HTML data attribute (avoids raw template tags inside JS)
+  const _root = document.getElementById('qr-root');
+  const HOTEL_LOGO = _root && _root.dataset && _root.dataset.hotelLogo ? _root.dataset.hotelLogo : null;
+
+  // Helpful console guard
+  if (!window.QRCode) {
+    console.error("QR library not loaded");
+    return;
+  }
+
+  const targets = document.querySelectorAll(".qr-target");
+  const size = 200; // tweak for print density
+
+  for (const el of targets) {
+    const url = el.getAttribute("data-url");
+
+    // Create canvas for QR
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+
+    try {
+      // Render QR on canvas
+      await QRCode.toCanvas(canvas, url, {
+        errorCorrectionLevel: "H", // robust against center logo
+        margin: 2,
+        width: size
+      });
+
+      // Optional: draw logo centered
+      if (HOTEL_LOGO) {
+        const ctx = canvas.getContext("2d");
+        const logo = new Image();
+        logo.crossOrigin = "anonymous";
+        await new Promise((resolve, reject) => {
+          logo.onload = resolve;
+          logo.onerror = reject;
+          logo.src = HOTEL_LOGO;
+        });
+        const logoSize = Math.floor(size * 0.22);
+        const x = Math.floor((size - logoSize) / 2);
+        const y = Math.floor((size - logoSize) / 2);
+        // white pad behind logo for contrast
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(x - 4, y - 4, logoSize + 8, logoSize + 8);
+        ctx.drawImage(logo, x, y, logoSize, logoSize);
+      }
+
+      // Mount the canvas
+      el.innerHTML = "";
+      el.appendChild(canvas);
+    } catch (e) {
+      console.error("QR render failed for", url, e);
+      el.textContent = "QR failed to render";
+    }
+  }
+})();
+</script>
+
+{% endblock %}

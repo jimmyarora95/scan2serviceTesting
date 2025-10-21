@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}{{ mode|capfirst }} Item — Scan2Service{% endblock %}
+{% block content %}
+
+<form method="post" enctype="multipart/form-data">
+  {% csrf_token %}
+
+  {% if form.non_field_errors %}
+    <div class="alert alert-danger py-2">{{ form.non_field_errors }}</div>
+  {% endif %}
+  {% for field in form %}
+    {% for err in field.errors %}
+      <div class="alert alert-danger py-2">{{ field.label }}: {{ err }}</div>
+    {% endfor %}
+  {% endfor %}
+<div class="row justify-content-center">
+  <div class="col-md-8 col-lg-7">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h4 class="mb-3">{{ mode|capfirst }} Item</h4>
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Category</label>
+              {{ form.category }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Name</label>
+              {{ form.name }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Price</label>
+              {{ form.price }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Unit</label>
+              {{ form.unit }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Position</label>
+              {{ form.position }}
+            </div>
+            <div class="col-12">
+              <label class="form-label">Description</label>
+              {{ form.description }}
+            </div>
+
+            <div class="col-12"><hr></div>
+
+            <div class="col-md-6">
+              <label class="form-label">Choose existing photo</label>
+              {{ form.image_existing }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Or upload new photo</label>
+              {{ form.image_upload }}
+            </div>
+
+            <div class="col-12">
+              <div class="form-check mt-2">
+                {{ form.is_available }} <label class="form-check-label ms-1">Available</label>
+              </div>
+            </div>
+          </div>
+
+          <button class="btn btn-success mt-3">Save</button>
+          <a href="{% url 'items_list' %}" class="btn btn-link">Cancel</a>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

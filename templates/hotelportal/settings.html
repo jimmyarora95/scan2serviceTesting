@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block title %}Settings — Scan2Service{% endblock %}
+{% block content %}
+<style>
+  .tile { transition: transform .1s ease, box-shadow .1s ease; }
+  .tile:hover { transform: translateY(-2px); box-shadow: 0 .5rem 1rem rgba(0,0,0,.15); }
+  .tile .icon { font-size: 2.2rem; line-height: 1; }
+  .tile h5 { margin-top: .75rem; font-weight: 600; }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3 class="mb-0">Settings</h3>
+  <a class="btn btn-outline-secondary btn-sm" href="/portal/">Back to Portal</a>
+</div>
+<p class="text-muted mb-4">Make changes from the options below.</p>
+
+<div class="row g-3 row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4">
+
+  <!-- All Staff -->
+  <div class="col">
+    <a href="{% url 'staff_list' %}" class="text-decoration-none text-dark">
+      <div class="card tile h-100">
+        <div class="card-body text-center">
+          <div class="icon">👥</div>
+          <h5>All Staff</h5>
+          <div class="text-muted small">View & add staff</div>
+        </div>
+      </div>
+    </a>
+  </div>
+
+  <!-- Room Layout (Rooms CRUD) -->
+  <div class="col">
+    <a href="{% url 'rooms_list' %}" class="text-decoration-none text-dark">
+      <div class="card tile h-100">
+        <div class="card-body text-center">
+          <div class="icon">🛏️</div>
+          <h5>Room Layout</h5>
+          <div class="text-muted small">Add / edit rooms</div>
+        </div>
+      </div>
+    </a>
+  </div>
+
+  <!-- Print Room QRs -->
+  <div class="col">
+    <a href="{% url 'rooms_qr_sheet' %}" class="text-decoration-none text-dark">
+      <div class="card tile h-100">
+        <div class="card-body text-center">
+          <div class="icon">� QR</div>
+          <h5>Print Room QRs</h5>
+          <div class="text-muted small">Generate & print codes</div>
+        </div>
+      </div>
+    </a>
+  </div>
+
+  <!-- Add Services (placeholder for Day 4) -->
+  <div class="col">
+    <a href="{% url 'categories_list' %}"  class="text-decoration-none text-dark"> <!-- Categories card -->
+      <div class="card tile h-100">
+        <div class="card-body text-center">
+          <div class="icon">🛎️</div>
+          <h5>Add Catogeries</h5>
+          <div class="text-muted small">Non-food services</div>
+        </div>
+      </div>
+    </a>
+  </div>
+
+  <!-- Service Items card -->
+  <div class="col">
+    <a href="{% url 'items_list' %}" ... class="text-decoration-none text-dark">
+      <div class="card tile h-100">
+        <div class="card-body text-center">
+          <div class="icon">🛎️</div>
+          <h5>Add Services</h5>
+          <div class="text-muted small">Non-food services</div>
+        </div>
+      </div>
+    </a>
+  </div>
+
+  
+
+  <!-- Food Menu (placeholder for Day 4) -->
+  <div class="col">
+    <a href="#" class="text-decoration-none text-dark" onclick="alert('Coming in Day 4: Food menu'); return false;">
+      <div class="card tile h-100">
+        <div class="card-body text-center">
+          <div class="icon">🍽️</div>
+          <h5>Food Menu</h5>
+          <div class="text-muted small">Add or remove items</div>
+        </div>
+      </div>
+    </a>
+  </div>
+
+  <!-- Deactivate QR Service (placeholder) -->
+  <div class="col">
+    <a href="#" class="text-decoration-none text-dark" onclick="alert('We will add subscription/controls on Day 8'); return false;">
+      <div class="card tile h-100">
+        <div class="card-body text-center">
+          <div class="icon">🛡️</div>
+          <h5>Deactivate QR Service</h5>
+          <div class="text-muted small">Control availability</div>
+        </div>
+      </div>
+    </a>
+  </div>
+
+  <!-- OTP Settings (placeholder) -->
+  <div class="col">
+    <a href="#" class="text-decoration-none text-dark" onclick="alert('We\'ll wire OTP later with WhatsApp/email (Day 9)'); return false;">
+      <div class="card tile h-100">
+        <div class="card-body text-center">
+          <div class="icon">🔐</div>
+          <h5>OTP Settings</h5>
+          <div class="text-muted small">Verification options</div>
+        </div>
+      </div>
+    </a>
+  </div>
+
+  <!-- Logout -->
+  <div class="col">
+    <a href="/logout/" class="text-decoration-none text-dark">
+      <div class="card tile h-100">
+        <div class="card-body text-center">
+          <div class="icon">↩️</div>
+          <h5>Log out</h5>
+          <div class="text-muted small">End session</div>
+        </div>
+      </div>
+    </a>
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Live Requests{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h3 class="mb-1">Live Requests</h3>
+    <div class="text-muted small">Auto-refreshing every <strong>8s</strong></div>
+  </div>
+  <div class="d-flex gap-3 align-items-center">
+    <span class="badge text-bg-success">Completed (today): <span id="countCompleted">{{ completed_today }}</span></span>
+    <span class="badge text-bg-secondary">Cancelled (today): <span id="countCancelled">{{ cancelled_today }}</span></span>
+    <a class="btn btn-outline-secondary btn-sm" href="{% url 'portal_requests_history' %}">View history</a>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-12 col-md-6">
+    <div class="card h-100">
+      <div class="card-header bg-danger text-white">NEW</div>
+      <div class="card-body" id="laneNew"></div>
+    </div>
+  </div>
+  <div class="col-12 col-md-6">
+    <div class="card h-100">
+      <div class="card-header bg-warning">ACCEPTED</div>
+      <div class="card-body" id="laneAccepted"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Request Detail Modal -->
+<div class="modal fade" id="reqDetailModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Request details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="reqDetailBody">
+        <div class="text-muted">Loading…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Audio for new requests -->
+<audio id="sndNew" preload="auto">
+  <source src="{% static 'audio/notify.mp3' %}" type="audio/mpeg">
+</audio>
+
+{# SAFELY embed initial JSON; the view already dumps valid JSON strings #}
+<script id="init-new" type="application/json">{{ new_initial_json|safe }}</script>
+<script id="init-acc" type="application/json">{{ accepted_initial_json|safe }}</script>
+
+<script>
+(function(){
+  function readInit(id){
+    const el = document.getElementById(id);
+    try { return JSON.parse(el.textContent || "[]"); } catch(e){ return []; }
+  }
+
+  const initialNew = readInit('init-new');
+  const initialAcc = readInit('init-acc');
+
+  const laneNew = document.getElementById('laneNew');
+  const laneAccepted = document.getElementById('laneAccepted');
+  const countCompleted = document.getElementById('countCompleted');
+  const countCancelled = document.getElementById('countCancelled');
+  const snd = document.getElementById('sndNew');
+  let seenNew = new Set(initialNew.map(r => r.id));   // track ids to detect brand-new
+
+  function fmtTime(iso){
+    if(!iso) return '';
+    const d = new Date(iso);
+    return d.toLocaleString();
+  }
+  function moneyINR(x){
+    try { return new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR'}).format(x||0); }
+    catch(e){ return `₹ ${(x||0).toFixed ? x.toFixed(2) : x}`; }
+  }
+
+  function cardHTML(r){
+    const isFood = r.kind === "FOOD";
+    const lines = isFood && r.lines && r.lines.length
+      ? ('<ul class="small mb-2 ps-3">' + r.lines.map(l => `<li>${l.name} × ${l.qty}</li>`).join('') + '</ul>')
+      : (r.note ? `<div class="small text-muted mb-2">${r.note}</div>` : '');
+
+    const timeLine = r.status === "ACCEPTED"
+      ? `<div class="small text-muted">Created: ${fmtTime(r.created_at)} · Accepted: ${fmtTime(r.accepted_at)}</div>`
+      : `<div class="small text-muted">Created: ${fmtTime(r.created_at)}</div>`;
+
+    const badge = isFood ? `<span class="badge text-bg-primary">FOOD</span>`
+                         : `<span class="badge text-bg-info">SERVICE</span>`;
+    const total = isFood ? `<div class="fw-bold">${moneyINR(r.subtotal)}</div>` : '';
+
+    const actions = r.status === "NEW"
+      ? `<button class="btn btn-sm btn-primary me-2 act" data-id="${r.id}" data-a="accept">Accept</button>
+         <button class="btn btn-sm btn-outline-danger me-2 act" data-id="${r.id}" data-a="cancel">Cancel</button>`
+      : `<button class="btn btn-sm btn-success me-2 act" data-id="${r.id}" data-a="complete">Complete</button>
+         <button class="btn btn-sm btn-outline-danger me-2 act" data-id="${r.id}" data-a="cancel">Cancel</button>`;
+
+    return `<div class="border rounded p-2 mb-2" data-card="${r.id}">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="fw-semibold">Room ${r.room} ${badge}</div>
+          ${timeLine}
+          ${lines}
+        </div>
+        ${total}
+      </div>
+      <div class="mt-2 d-flex">
+        <button class="btn btn-sm btn-outline-secondary me-2 view" data-id="${r.id}">View</button>
+        ${actions}
+      </div>
+    </div>`;
+  }
+
+  function renderLane(el, list){
+    if (!list || !list.length){
+      el.innerHTML = '<div class="text-muted">Nothing here.</div>';
+      return;
+    }
+    el.innerHTML = list.map(cardHTML).join('');
+  }
+
+  // initial render
+  renderLane(laneNew, initialNew);
+  renderLane(laneAccepted, initialAcc);
+
+  function getCookie(name){
+    const m=document.cookie.match(new RegExp('(^| )'+name+'=([^;]+)'));
+    return m?decodeURIComponent(m[2]):null;
+  }
+
+  async function poll(){
+    try{
+      const res = await fetch("{% url 'live_poll' %}", { credentials: "same-origin" });
+      const data = await res.json();
+
+      // detect truly new NEW requests
+      const incomingIds = new Set(data.new.map(r => r.id));
+      let play = false;
+      for (const id of incomingIds) {
+        if (!seenNew.has(id)) { play = true; break; }
+      }
+
+      renderLane(laneNew, data.new);
+      renderLane(laneAccepted, data.accepted);
+      countCompleted.textContent = data.counts.completed_today;
+      countCancelled.textContent = data.counts.cancelled_today;
+
+      seenNew = incomingIds;
+      if (play) { try { snd.currentTime = 0; snd.play(); } catch(e){} }
+    }catch(e){
+      // swallow transient errors
+    }
+  }
+
+  setInterval(poll, 8000);
+
+  // actions: accept/complete/cancel
+  document.addEventListener('click', async (e)=>{
+    if (!e.target.classList.contains('act')) return;
+    const id = e.target.dataset.id;
+    const action = e.target.dataset.a;
+    const form = new URLSearchParams({ action });
+    const res = await fetch(`{% url 'live_action' 0 %}`.replace('/0/', `/${id}/`), {
+      method: "POST",
+      headers: { "X-CSRFToken": getCookie('csrftoken'), "Content-Type":"application/x-www-form-urlencoded" },
+      body: form,
+      credentials: "same-origin"
+    });
+    const data = await res.json().catch(()=>({ok:false}));
+    if (data.ok){
+      poll();
+    }else{
+      alert("Could not perform action (maybe stale state).");
+      poll();
+    }
+  });
+
+  // view details
+  const reqDetailModal = new bootstrap.Modal(document.getElementById('reqDetailModal'));
+  const reqDetailBody = document.getElementById('reqDetailBody');
+
+  document.addEventListener('click', async (e)=>{
+    if (!e.target.classList.contains('view')) return;
+    const id = e.target.dataset.id;
+    reqDetailBody.innerHTML = '<div class="text-muted">Loading…</div>';
+    const res = await fetch(`{% url 'live_detail' 0 %}`.replace('/0/', `/${id}/`), { credentials: "same-origin" });
+    const data = await res.json().catch(()=>({ok:false}));
+    if (data.ok) {
+      reqDetailBody.innerHTML = data.html;
+    } else {
+      reqDetailBody.innerHTML = '<div class="text-danger">Could not load details.</div>';
+    }
+    reqDetailModal.show();
+  });
+})();
+</script>
+{% endblock %}
